@@ -11,13 +11,15 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     
     # Database
-    DATABASE_URL: str = "postgresql+psycopg://postgres:admin@localhost:5432/edumind_learning_style_venath"
+    DATABASE_URL: str = "postgresql+psycopg://postgres:admin@localhost:5432/edumind_learning_style"
     
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
     
     # CORS
     CORS_ORIGINS: list = ["*"]
+
+    ENGAGEMENT_API_URL: str = "http://localhost:8005/api/v1"
     
     # Recommendation Settings
     MAX_RECOMMENDATIONS_PER_DAY: int = 5

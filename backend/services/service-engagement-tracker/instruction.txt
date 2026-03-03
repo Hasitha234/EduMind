@@ -2,10 +2,10 @@ Terminal 1 (API Server)
 cd C:\Users\bdils\OneDrive\Desktop\research4\EduMind\backend\services\service-engagement-tracker
 export DATABASE_URL="postgresql+psycopg://postgres:admin@localhost:5432/edumind"
 source venv/bin/activate
-uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
 
 
-http://localhost:8002/docs
+http://localhost:8005/docs
 
 
 Terminal 2 (Open Frontend):

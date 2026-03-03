@@ -2,10 +2,11 @@
 System API Routes
 Health checks, statistics, and system information
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from datetime import datetime
+from typing import Optional
 
 from app.api.dependencies import get_db
 from app.models import (
@@ -54,19 +55,19 @@ def health_check(db: Session = Depends(get_db)):
 
 
 @router.get("/api/v1/stats", response_model=StatsResponse)
-def get_system_statistics(db: Session = Depends(get_db)):
+def get_system_statistics(
+    institute_id: str = Query("LMS_INST_A", description="Institute identifier — stats are scoped per institute"),
+    db: Session = Depends(get_db)
+):
     """
-    Get overall system statistics
-    
-    Returns counts and key metrics across all tables
+    Get system statistics scoped to a specific institute.
+    All counts and averages reflect only that institute's students.
     """
     try:
-        # Count records
         total_students_engagement = db.query(
             func.count(func.distinct(EngagementScore.student_id))
-        ).scalar()
-    except Exception as e:
-        # Return default values if database is not connected
+        ).filter(EngagementScore.institute_id == institute_id).scalar()
+    except Exception:
         return StatsResponse(
             total_students=0,
             total_engagement_records=0,
@@ -77,32 +78,31 @@ def get_system_statistics(db: Session = Depends(get_db)):
             low_engagement_students=0,
             avg_engagement_score=0.0
         )
-    
+
     total_engagement_records = db.query(
         func.count(EngagementScore.id)
-    ).scalar()
-    
+    ).filter(EngagementScore.institute_id == institute_id).scalar()
+
     total_predictions = db.query(
         func.count(DisengagementPrediction.id)
-    ).scalar()
-    
+    ).filter(DisengagementPrediction.institute_id == institute_id).scalar()
+
     total_events = db.query(
         func.count(StudentActivityEvent.event_id)
-    ).scalar()
-    
-    # Latest data date
+    ).filter(StudentActivityEvent.institute_id == institute_id).scalar()
+
     latest_engagement_date = db.query(
         func.max(EngagementScore.date)
-    ).scalar()
-    
-    # High risk students - get latest prediction per student
-    # Subquery to get latest prediction per student
+    ).filter(EngagementScore.institute_id == institute_id).scalar()
+
+    # Latest prediction per student (scoped to institute)
     latest_predictions = db.query(
         DisengagementPrediction.student_id,
         func.max(DisengagementPrediction.prediction_date).label('max_date')
+    ).filter(
+        DisengagementPrediction.institute_id == institute_id
     ).group_by(DisengagementPrediction.student_id).subquery()
-    
-    # Count students with High risk in their latest prediction
+
     high_risk_students = db.query(
         func.count(func.distinct(DisengagementPrediction.student_id))
     ).join(
@@ -112,16 +112,32 @@ def get_system_statistics(db: Session = Depends(get_db)):
             DisengagementPrediction.prediction_date == latest_predictions.c.max_date
         )
     ).filter(
+        DisengagementPrediction.institute_id == institute_id,
         DisengagementPrediction.risk_level == 'High'
     ).scalar()
-    
-    # Low engagement students - get latest score per student
+
+    # At-risk count (any risk level marked at_risk=True) from latest prediction per student
+    at_risk_students = db.query(
+        func.count(func.distinct(DisengagementPrediction.student_id))
+    ).join(
+        latest_predictions,
+        and_(
+            DisengagementPrediction.student_id == latest_predictions.c.student_id,
+            DisengagementPrediction.prediction_date == latest_predictions.c.max_date
+        )
+    ).filter(
+        DisengagementPrediction.institute_id == institute_id,
+        DisengagementPrediction.at_risk == True
+    ).scalar()
+
+    # Latest score per student (for avg and low-engagement count)
     latest_scores = db.query(
         EngagementScore.student_id,
         func.max(EngagementScore.date).label('max_date')
+    ).filter(
+        EngagementScore.institute_id == institute_id
     ).group_by(EngagementScore.student_id).subquery()
-    
-    # Count students with Low engagement in their latest score
+
     low_engagement_students = db.query(
         func.count(func.distinct(EngagementScore.student_id))
     ).join(
@@ -131,14 +147,24 @@ def get_system_statistics(db: Session = Depends(get_db)):
             EngagementScore.date == latest_scores.c.max_date
         )
     ).filter(
+        EngagementScore.institute_id == institute_id,
         EngagementScore.engagement_level == 'Low'
     ).scalar()
-    
-    # Calculate average engagement score (all data)
-    avg_engagement = db.query(
-        func.avg(EngagementScore.engagement_score)
-    ).scalar()
-    
+
+    # Avg engagement — average of each student's LATEST score (matches overview page)
+    latest_score_rows = db.query(EngagementScore.engagement_score).join(
+        latest_scores,
+        and_(
+            EngagementScore.student_id == latest_scores.c.student_id,
+            EngagementScore.date == latest_scores.c.max_date
+        )
+    ).filter(EngagementScore.institute_id == institute_id).all()
+
+    avg_engagement = (
+        sum(r[0] for r in latest_score_rows) / len(latest_score_rows)
+        if latest_score_rows else 0.0
+    )
+
     return StatsResponse(
         total_students=total_students_engagement or 0,
         total_engagement_records=total_engagement_records or 0,
@@ -147,7 +173,8 @@ def get_system_statistics(db: Session = Depends(get_db)):
         latest_data_date=latest_engagement_date,
         high_risk_students=high_risk_students or 0,
         low_engagement_students=low_engagement_students or 0,
-        avg_engagement_score=float(avg_engagement) if avg_engagement else 0.0
+        avg_engagement_score=round(float(avg_engagement), 2),
+        at_risk_students=at_risk_students or 0,
     )
 
 

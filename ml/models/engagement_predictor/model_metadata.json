@@ -1,0 +1,121 @@
+{
+  "model_type": "GradientBoostingClassifier",
+  "training_date": "2026-02-27T10:09:56.539528",
+  "num_features": 20,
+  "feature_names": [
+    "login_score",
+    "session_score",
+    "interaction_score",
+    "forum_score",
+    "assignment_score",
+    "engagement_score",
+    "engagement_score_lag_1day",
+    "engagement_score_lag_7days",
+    "engagement_score_lag_3days",
+    "engagement_score_lag_14days",
+    "rolling_avg_7days",
+    "rolling_avg_30days",
+    "engagement_volatility_7days",
+    "is_declining",
+    "is_improving",
+    "login_to_session_ratio",
+    "interaction_to_forum_ratio",
+    "consecutive_low_days",
+    "days_since_start",
+    "cumulative_avg_score"
+  ],
+  "num_training_samples": 5520,
+  "num_test_samples": 1380,
+  "accuracy": 1.0,
+  "roc_auc": 1.0,
+  "at_risk_threshold": 30,
+  "risk_thresholds": {
+    "high": 0.7,
+    "medium": 0.4,
+    "low": 0.0
+  },
+  "feature_importance": [
+    {
+      "feature": "consecutive_low_days",
+      "importance": 0.5680767672372083
+    },
+    {
+      "feature": "engagement_score",
+      "importance": 0.43192323276271455
+    },
+    {
+      "feature": "engagement_score_lag_3days",
+      "importance": 1.7578084143490416e-14
+    },
+    {
+      "feature": "engagement_volatility_7days",
+      "importance": 1.4941418062779038e-14
+    },
+    {
+      "feature": "login_score",
+      "importance": 9.561945056993955e-15
+    },
+    {
+      "feature": "engagement_score_lag_1day",
+      "importance": 8.501286601129826e-15
+    },
+    {
+      "feature": "rolling_avg_30days",
+      "importance": 7.30843798908167e-15
+    },
+    {
+      "feature": "assignment_score",
+      "importance": 6.195271969871954e-15
+    },
+    {
+      "feature": "forum_score",
+      "importance": 4.944425933543424e-15
+    },
+    {
+      "feature": "cumulative_avg_score",
+      "importance": 3.2563708911928357e-15
+    },
+    {
+      "feature": "interaction_score",
+      "importance": 2.753038602310252e-15
+    },
+    {
+      "feature": "login_to_session_ratio",
+      "importance": 1.4797154263661804e-15
+    },
+    {
+      "feature": "engagement_score_lag_14days",
+      "importance": 1.3474646210974554e-15
+    },
+    {
+      "feature": "interaction_to_forum_ratio",
+      "importance": 3.953589589232582e-16
+    },
+    {
+      "feature": "engagement_score_lag_7days",
+      "importance": 2.0986067147561755e-16
+    },
+    {
+      "feature": "rolling_avg_7days",
+      "importance": 1.0843355641176131e-16
+    },
+    {
+      "feature": "is_declining",
+      "importance": 0.0
+    },
+    {
+      "feature": "is_improving",
+      "importance": 0.0
+    },
+    {
+      "feature": "days_since_start",
+      "importance": 0.0
+    },
+    {
+      "feature": "session_score",
+      "importance": -1.4601230634084816e-15
+    }
+  ],
+  "version": "1.0",
+  "trained_on": "synthetic_dummy_data"
+}

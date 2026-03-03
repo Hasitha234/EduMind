@@ -4,7 +4,10 @@
  */
 
 import { PredictorErrorBoundary } from '@/components/common/PredictorErrorBoundary';
+import { useAuth } from '@/store/authStore';
+import { useSearch } from '@tanstack/react-router';
 import { BookOpenCheck, ChartNoAxesCombined, Database, Users } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import type { ILearningStyleDashboardService } from './data/interfaces';
 import { useLearningStyleWorkflow } from './core/hooks/useLearningStyleWorkflow';
 import { AnalysisStep } from './features/workflow/AnalysisStep';
@@ -28,6 +31,25 @@ function formatPercentage(value: number | undefined): string {
 
 function LearningStylePredictorCore({ service }: LearningStylePredictorCoreProps) {
     const workflow = useLearningStyleWorkflow(service);
+    const { user, isAuthenticated } = useAuth();
+    const autoSelected = useRef(false);
+    const search = useSearch({ from: '/learning-style' });
+    const urlStudentId = (search as { student_id?: string }).student_id;
+
+    const isStudent = isAuthenticated && user?.role === 'student';
+
+    useEffect(() => {
+        if (autoSelected.current) return;
+
+        // URL param from overview takes priority (admin clicking a student)
+        const targetId = urlStudentId ?? (isStudent ? user?.id : undefined);
+        if (targetId) {
+            autoSelected.current = true;
+            workflow.actions.setStudentLookup(targetId);
+            void workflow.actions.loadStudentProfile();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [urlStudentId, isStudent, user?.id]);
 
     const status = workflow.view.systemHealthStatus;
     const stats = workflow.view.systemStats;

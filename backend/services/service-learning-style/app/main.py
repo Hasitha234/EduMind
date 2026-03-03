@@ -12,7 +12,8 @@ from app.api import (
     routes_resources,
     routes_struggles,
     routes_system,
-    routes_ml
+    routes_ml,
+    routes_sync,
 )
 
 # Create FastAPI app
@@ -40,6 +41,7 @@ app.include_router(routes_resources.router, prefix=settings.API_V1_PREFIX)
 app.include_router(routes_struggles.router, prefix=settings.API_V1_PREFIX)
 app.include_router(routes_recommendations.router, prefix=settings.API_V1_PREFIX)
 app.include_router(routes_ml.router, prefix=settings.API_V1_PREFIX)
+app.include_router(routes_sync.router, prefix=settings.API_V1_PREFIX)
 
 # Mount static files for frontend
 frontend_path = Path(__file__).parent.parent / "frontend"

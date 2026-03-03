@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
+import { useAuth, useAuthStore } from '@/store/authStore';
 import { useNavigate } from '@tanstack/react-router';
-import { Menu, X } from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ModeToggle } from '../mode-toggle/mode-toggle';
 
@@ -8,6 +9,8 @@ export function Navbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const navigate = useNavigate();
+    const { user, isAuthenticated } = useAuth();
+    const logout = useAuthStore((s) => s.logout);
 
     // Handle scroll effect
     useEffect(() => {
@@ -123,13 +126,28 @@ export function Navbar() {
                         {/* Desktop Actions */}
                         <div className="hidden md:flex items-center gap-4">
                             <ModeToggle />
-                            <div className="w-px h-6 bg-border" /> {/* Divider */}
-                            <Button
-                                onClick={() => navigate({ to: '/user-signin' })}
-                                className="rounded-full px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
-                            >
-                                Sign In
-                            </Button>
+                            <div className="w-px h-6 bg-border" />
+                            {isAuthenticated && user ? (
+                                <div className="flex items-center gap-3">
+                                    <span className="text-sm font-medium text-foreground">{user.name}</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => { logout(); navigate({ to: '/' }); }}
+                                        className="rounded-full px-3"
+                                    >
+                                        <LogOut size={16} className="mr-1" />
+                                        Logout
+                                    </Button>
+                                </div>
+                            ) : (
+                                <Button
+                                    onClick={() => navigate({ to: '/user-signin' })}
+                                    className="rounded-full px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+                                >
+                                    Sign In
+                                </Button>
+                            )}
                         </div>
 
                         {/* Mobile Menu Button */}
@@ -179,12 +197,23 @@ export function Navbar() {
                             Docs
                         </button>
                         <div className="h-px bg-border my-2" />
-                        <Button
-                            onClick={() => { navigate({ to: '/user-signin' }); setMobileMenuOpen(false); }}
-                            className="w-full rounded-xl h-12 text-base bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-                        >
-                            Sign In
-                        </Button>
+                        {isAuthenticated && user ? (
+                            <Button
+                                onClick={() => { logout(); navigate({ to: '/' }); setMobileMenuOpen(false); }}
+                                variant="outline"
+                                className="w-full rounded-xl h-12 text-base"
+                            >
+                                <LogOut size={16} className="mr-2" />
+                                Logout ({user.name})
+                            </Button>
+                        ) : (
+                            <Button
+                                onClick={() => { navigate({ to: '/user-signin' }); setMobileMenuOpen(false); }}
+                                className="w-full rounded-xl h-12 text-base bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+                            >
+                                Sign In
+                            </Button>
+                        )}
                     </div>
                 </div>
             </nav>

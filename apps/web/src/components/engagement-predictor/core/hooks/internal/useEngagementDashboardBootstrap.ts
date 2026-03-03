@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useAuthStore } from '@/store/authStore';
 import { getServiceHealth, getStudents, getSystemStats } from '../../../services/engagementDashboardApi';
 import { normalizeSystemStatus } from '../../utils/engagementDashboardMappers';
 import type { EngagementDashboardStoreSlice } from './useEngagementDashboardStoreSlice';
@@ -18,6 +19,9 @@ export function useEngagementDashboardBootstrap({
     setStudents,
     setError,
 }: BootstrapStateDeps) {
+    const user = useAuthStore((s) => s.user);
+    const instituteId = user?.institute_id ?? 'LMS_INST_A';
+
     useEffect(() => {
         const initialize = async () => {
             try {
@@ -35,7 +39,10 @@ export function useEngagementDashboardBootstrap({
             }
 
             try {
-                const [statsPayload, studentsPayload] = await Promise.all([getSystemStats(), getStudents(200)]);
+                const [statsPayload, studentsPayload] = await Promise.all([
+                    getSystemStats(instituteId),
+                    getStudents(200, instituteId),
+                ]);
                 setStats(statsPayload);
                 setStudents(studentsPayload.students || []);
             } catch (initializationError) {
@@ -48,5 +55,5 @@ export function useEngagementDashboardBootstrap({
         };
 
         void initialize();
-    }, [setError, setStats, setStudents, setSystemMessage, setSystemStatus]);
+    }, [instituteId, setError, setStats, setStudents, setSystemMessage, setSystemStatus]);
 }

@@ -1,25 +1,60 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Check, GraduationCap, Lock, Mail, Shield } from 'lucide-react';
-import { useState } from 'react';
+import { useAuthStore } from '@/store/authStore';
+import { useNavigate, useSearch } from '@tanstack/react-router';
+import { ArrowLeft, Check, GraduationCap, Lock, Shield, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 function UserSignin() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const login = useAuthStore((s) => s.login);
+  const { student_id: queryStudentId, institute_id: queryInstituteId } = useSearch({ from: '/user-signin' });
+
+  const [studentId, setStudentId] = useState(queryStudentId ?? '');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Auto-login when arriving from LMS with a student_id query param
+  useEffect(() => {
+    if (queryStudentId) {
+      setStudentId(queryStudentId);
+      performLogin(queryStudentId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryStudentId]);
+
+  function performLogin(id: string) {
+    const trimmed = id.trim().toUpperCase();
+    if (!trimmed) {
+      setError('Student ID is required');
+      return;
+    }
+
     setIsLoading(true);
+    setError('');
 
     setTimeout(() => {
       setIsLoading(false);
-      navigate({ to: '/' });
-    }, 1500);
+      login(
+        {
+          id: trimmed,
+          name: `Student ${trimmed}`,
+          email: `${trimmed.toLowerCase()}@lms.edu`,
+          role: 'student',
+          institute_id: (queryInstituteId ?? 'LMS_INST_A').trim(),
+        },
+        `student-token-${trimmed}`,
+      );
+      navigate({ to: '/engagement' });
+    }, 600);
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    performLogin(studentId);
   };
 
   return (
@@ -49,29 +84,29 @@ function UserSignin() {
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-foreground mb-2">Welcome Back</h1>
-            <p className="text-muted-foreground">Sign in to your learning account</p>
+            <p className="text-muted-foreground">Sign in to view your analytics</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
+            {/* Student ID Field */}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground font-medium flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Email Address
+              <Label htmlFor="studentId" className="text-foreground font-medium flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Student ID
               </Label>
               <Input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                type="text"
+                id="studentId"
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                placeholder="e.g. STU0001"
                 required
                 className="h-12 bg-background border-input focus:border-emerald-500 focus:ring-emerald-500 text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
-            {/* Password Field */}
+            {/* Password Field (cosmetic) */}
             <div className="space-y-2">
               <Label htmlFor="password" className="text-foreground font-medium flex items-center gap-2">
                 <Lock className="w-4 h-4" />
@@ -83,12 +118,11 @@ function UserSignin() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                required
                 className="h-12 bg-background border-input focus:border-emerald-500 focus:ring-emerald-500 text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
-            {/* Remember Me & Forgot Password */}
+            {/* Remember Me */}
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -99,10 +133,14 @@ function UserSignin() {
                 />
                 <span className="text-sm text-muted-foreground">Remember me</span>
               </label>
-              <button type="button" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-                Forgot password?
-              </button>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
 
             {/* Submit Button */}
             <Button
@@ -145,18 +183,8 @@ function UserSignin() {
             Admin Sign in
           </Button>
 
-          {/* Sign Up Link */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-slate-600">
-              Don't have an account?{' '}
-              <button type="button" className="text-emerald-600 hover:text-emerald-700 font-semibold">
-                Sign up
-              </button>
-            </p>
-          </div>
-
           {/* Back to Home */}
-          <div className="mt-4 text-center">
+          <div className="mt-6 text-center">
             <button
               type="button"
               onClick={() => navigate({ to: '/' })}

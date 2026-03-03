@@ -3,6 +3,7 @@ export type SystemStatus = 'healthy' | 'degraded' | 'down' | 'checking';
 export interface SystemStatsResponse {
     total_students: number;
     high_risk_students: number;
+    at_risk_students: number;
     low_engagement_students: number;
     avg_engagement_score: number;
 }

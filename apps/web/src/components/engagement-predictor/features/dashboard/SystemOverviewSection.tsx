@@ -81,8 +81,8 @@ export function SystemOverviewSection({
                     <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
                         <Sparkles className="h-4 w-4" />
                     </div>
-                    <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{stats?.low_engagement_students ?? '--'}</div>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Low Engagement</div>
+                    <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{stats?.at_risk_students ?? '--'}</div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">At Risk</div>
                 </article>
 
                 <article className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm dark:bg-slate-900">

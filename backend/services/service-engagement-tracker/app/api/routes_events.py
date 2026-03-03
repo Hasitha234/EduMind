@@ -2,35 +2,46 @@
 Event Ingestion API Routes
 For receiving activity events from Moodle or other sources
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Header, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 import uuid
 
 from app.api.dependencies import get_db
 from app.models import StudentActivityEvent
 from app.schemas import EventCreate
+from app.services.aggregation_service import run_pipeline
 
 router = APIRouter(prefix="/api/v1/events", tags=["Event Ingestion"])
+
+FALLBACK_INSTITUTE = "LMS_INST_A"
+
+
+def _resolve_institute(header_value: Optional[str], body_value: Optional[str]) -> str:
+    """Header wins over body field; both fall back to default."""
+    return (header_value or body_value or FALLBACK_INSTITUTE).strip()
 
 
 @router.post("/ingest", status_code=status.HTTP_201_CREATED)
 def ingest_event(
     event: EventCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_institute_id: Optional[str] = Header(None, alias="X-Institute-ID"),
 ):
     """
-    Ingest a single activity event from Moodle or other LMS
-    
-    This endpoint receives real-time events and stores them in the database.
-    Events will be aggregated into daily metrics by a scheduled job.
+    Ingest a single activity event from any LMS.
+
+    The institute is identified by the X-Institute-ID request header
+    (preferred) or the institute_id field in the JSON body.
+    After storing the event the aggregation pipeline runs automatically.
     """
+    institute_id = _resolve_institute(x_institute_id, event.institute_id)
     try:
-        # Create event record
         db_event = StudentActivityEvent(
             event_id=uuid.uuid4(),
             student_id=event.student_id,
+            institute_id=institute_id,
             event_type=event.event_type.value,
             event_timestamp=event.event_timestamp,
             session_id=event.session_id,
@@ -42,11 +53,20 @@ def ingest_event(
         db.add(db_event)
         db.commit()
         db.refresh(db_event)
+
+        # Run aggregation pipeline for this student on the event's date
+        event_date = event.event_timestamp.date()
+        try:
+            pipeline_result = run_pipeline(db, event.student_id, event_date, institute_id=institute_id)
+        except Exception:
+            pipeline_result = None
         
         return {
             "status": "success",
             "event_id": str(db_event.event_id),
-            "message": "Event ingested successfully"
+            "institute_id": institute_id,
+            "message": "Event ingested and aggregated",
+            "aggregation": pipeline_result,
         }
         
     except Exception as e:
@@ -60,19 +80,21 @@ def ingest_event(
 @router.post("/ingest/batch", status_code=status.HTTP_201_CREATED)
 def ingest_events_batch(
     events: List[EventCreate],
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_institute_id: Optional[str] = Header(None, alias="X-Institute-ID"),
 ):
     """
-    Ingest multiple activity events in batch
-    
-    More efficient for bulk imports or batch synchronization from LMS.
+    Ingest multiple activity events in batch.
+    X-Institute-ID header applies to all events in the batch.
     """
     try:
         db_events = []
         for event in events:
+            institute_id = _resolve_institute(x_institute_id, event.institute_id)
             db_event = StudentActivityEvent(
                 event_id=uuid.uuid4(),
                 student_id=event.student_id,
+                institute_id=institute_id,
                 event_type=event.event_type.value,
                 event_timestamp=event.event_timestamp,
                 session_id=event.session_id,

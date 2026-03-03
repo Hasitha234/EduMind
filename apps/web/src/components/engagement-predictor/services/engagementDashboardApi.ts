@@ -28,12 +28,16 @@ export async function getServiceHealth(): Promise<ServiceHealthResponse> {
     return requestJson<ServiceHealthResponse>(`${ENGAGEMENT_API_BASE}/health`);
 }
 
-export async function getSystemStats(): Promise<SystemStatsResponse> {
-    return requestJson<SystemStatsResponse>(`${ENGAGEMENT_API_BASE}/api/v1/stats`);
+export async function getSystemStats(instituteId = 'LMS_INST_A'): Promise<SystemStatsResponse> {
+    return requestJson<SystemStatsResponse>(
+        `${ENGAGEMENT_API_BASE}/api/v1/stats?institute_id=${encodeURIComponent(instituteId)}`
+    );
 }
 
-export async function getStudents(limit = 200): Promise<StudentListResponse> {
-    return requestJson<StudentListResponse>(`${ENGAGEMENT_API_BASE}/api/v1/students/list?limit=${limit}`);
+export async function getStudents(limit = 200, instituteId = 'LMS_INST_A'): Promise<StudentListResponse> {
+    return requestJson<StudentListResponse>(
+        `${ENGAGEMENT_API_BASE}/api/v1/students/list?limit=${limit}&institute_id=${encodeURIComponent(instituteId)}`
+    );
 }
 
 export async function getStudentDashboard(studentId: string): Promise<StudentDashboardResponse> {

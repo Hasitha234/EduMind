@@ -6,6 +6,8 @@ export interface AuthUser {
     name: string;
     email: string;
     role: 'admin' | 'student';
+    /** The institute this user belongs to. Admins see only their institute's students. */
+    institute_id: string;
     avatar?: string;
 }
 

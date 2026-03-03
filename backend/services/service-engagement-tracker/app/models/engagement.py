@@ -22,6 +22,7 @@ class StudentActivityEvent(Base):
     
     event_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     student_id = Column(String(50), nullable=False, index=True)
+    institute_id = Column(String(100), nullable=False, index=True, default='LMS_INST_A')
     event_type = Column(String(50), nullable=False)
     event_timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
     session_id = Column(String(100), nullable=True)
@@ -58,6 +59,7 @@ class DailyEngagementMetric(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     student_id = Column(String(50), nullable=False, index=True)
+    institute_id = Column(String(100), nullable=False, index=True, default='LMS_INST_A')
     date = Column(Date, nullable=False, index=True)
     
     # Login metrics
@@ -115,6 +117,7 @@ class EngagementScore(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     student_id = Column(String(50), nullable=False, index=True)
+    institute_id = Column(String(100), nullable=False, index=True, default='LMS_INST_A')
     date = Column(Date, nullable=False, index=True)
     
     # Component scores (0-100 scale)
@@ -168,6 +171,7 @@ class DisengagementPrediction(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     student_id = Column(String(50), nullable=False, index=True)
+    institute_id = Column(String(100), nullable=False, index=True, default='LMS_INST_A')
     prediction_date = Column(Date, nullable=False, index=True)
     
     # Prediction outputs

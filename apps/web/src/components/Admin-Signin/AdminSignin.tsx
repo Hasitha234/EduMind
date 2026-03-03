@@ -1,17 +1,26 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, Check, Lock, Mail, Shield } from 'lucide-react';
 import { useState } from 'react';
 
 function AdminSignin() {
   const navigate = useNavigate();
+  const login = useAuthStore((s) => s.login);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Credential registry: username -> { password, institute_id, display name }
+  // In production this would be a real API call.
+  const ADMIN_ACCOUNTS: Record<string, { password: string; institute_id: string; name: string }> = {
+    admin:   { password: 'admin',   institute_id: 'LMS_INST_A', name: 'Admin – Institute A' },
+    admin_b: { password: 'admin_b', institute_id: 'LMS_INST_B', name: 'Admin – Institute B' },
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,8 +29,19 @@ function AdminSignin() {
 
     setTimeout(() => {
       setIsLoading(false);
-      if (username === 'admin' && password === 'admin') {
-        navigate({ to: '/admin' });
+      const account = ADMIN_ACCOUNTS[username];
+      if (account && account.password === password) {
+        login(
+          {
+            id: `ADMIN_${account.institute_id}`,
+            name: account.name,
+            email: `${username}@edumind.com`,
+            role: 'admin',
+            institute_id: account.institute_id,
+          },
+          `admin-token-${account.institute_id}`,
+        );
+        navigate({ to: '/engagement-overview' });
       } else {
         setError('Invalid username or password');
       }

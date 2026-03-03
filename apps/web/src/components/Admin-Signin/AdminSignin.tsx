@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/store/authStore';
+import { useEngagementDashboardStore } from '@/store/engagement-dashboard';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, Check, Lock, Mail, Shield } from 'lucide-react';
 import { useState } from 'react';
@@ -31,6 +32,9 @@ function AdminSignin() {
       setIsLoading(false);
       const account = ADMIN_ACCOUNTS[username];
       if (account && account.password === password) {
+        useEngagementDashboardStore.getState().setStats(null);
+        useEngagementDashboardStore.getState().setStudents([]);
+        useEngagementDashboardStore.getState().clearDashboardData();
         login(
           {
             id: `ADMIN_${account.institute_id}`,

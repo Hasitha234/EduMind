@@ -19,8 +19,7 @@ export function useEngagementDashboardBootstrap({
     setStudents,
     setError,
 }: BootstrapStateDeps) {
-    const user = useAuthStore((s) => s.user);
-    const instituteId = user?.institute_id ?? 'LMS_INST_A';
+    const instituteId = useAuthStore((s) => s.user?.institute_id) ?? 'LMS_INST_A';
 
     useEffect(() => {
         const initialize = async () => {
@@ -38,10 +37,12 @@ export function useEngagementDashboardBootstrap({
                 setSystemMessage('Engagement service is offline');
             }
 
+            const freshInstituteId = useAuthStore.getState().user?.institute_id ?? 'LMS_INST_A';
+
             try {
                 const [statsPayload, studentsPayload] = await Promise.all([
-                    getSystemStats(instituteId),
-                    getStudents(200, instituteId),
+                    getSystemStats(freshInstituteId),
+                    getStudents(200, freshInstituteId),
                 ]);
                 setStats(statsPayload);
                 setStudents(studentsPayload.students || []);

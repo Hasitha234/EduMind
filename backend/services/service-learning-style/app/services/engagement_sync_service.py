@@ -25,7 +25,7 @@ def fetch_daily_metrics(student_id: str, days: int = 7) -> List[Dict[str, Any]]:
     """
     url = f"{settings.ENGAGEMENT_API_URL}/engagement/students/{student_id}/metrics"
     params = {"days": days}
-    with httpx.Client(timeout=5.0) as client:
+    with httpx.Client(timeout=30.0) as client:
         resp = client.get(url, params=params)
         resp.raise_for_status()
         return resp.json()

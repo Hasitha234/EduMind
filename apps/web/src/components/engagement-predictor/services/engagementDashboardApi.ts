@@ -40,8 +40,15 @@ export async function getStudents(limit = 200, instituteId = 'LMS_INST_A'): Prom
     );
 }
 
-export async function getStudentDashboard(studentId: string): Promise<StudentDashboardResponse> {
-    return requestJson<StudentDashboardResponse>(`${ENGAGEMENT_API_BASE}/api/v1/students/${encodeURIComponent(studentId)}/dashboard`);
+function iq(instituteId?: string): string {
+    const id = instituteId ?? 'LMS_INST_A';
+    return `institute_id=${encodeURIComponent(id)}`;
+}
+
+export async function getStudentDashboard(studentId: string, instituteId?: string): Promise<StudentDashboardResponse> {
+    return requestJson<StudentDashboardResponse>(
+        `${ENGAGEMENT_API_BASE}/api/v1/students/${encodeURIComponent(studentId)}/dashboard?${iq(instituteId)}`
+    );
 }
 
 export async function getEngagementHistory(studentId: string, days = 30): Promise<EngagementHistoryItem[]> {
@@ -62,15 +69,15 @@ export async function getEngagementSummary(studentId: string): Promise<Engagemen
     ).catch(() => null);
 }
 
-export async function getLatestPrediction(studentId: string): Promise<PredictionLatestResponse> {
+export async function getLatestPrediction(studentId: string, instituteId?: string): Promise<PredictionLatestResponse> {
     return requestJson<PredictionLatestResponse>(
-        `${ENGAGEMENT_API_BASE}/api/v1/predictions/students/${encodeURIComponent(studentId)}/latest`
+        `${ENGAGEMENT_API_BASE}/api/v1/predictions/students/${encodeURIComponent(studentId)}/latest?${iq(instituteId)}`
     );
 }
 
-export async function generateSchedule(studentId: string): Promise<BackendScheduleResponse> {
+export async function generateSchedule(studentId: string, instituteId?: string): Promise<BackendScheduleResponse> {
     return requestJson<BackendScheduleResponse>(
-        `${ENGAGEMENT_API_BASE}/api/v1/schedules/students/${encodeURIComponent(studentId)}/generate`,
+        `${ENGAGEMENT_API_BASE}/api/v1/schedules/students/${encodeURIComponent(studentId)}/generate?${iq(instituteId)}`,
         {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -79,8 +86,8 @@ export async function generateSchedule(studentId: string): Promise<BackendSchedu
     );
 }
 
-export async function getScheduleSummary(studentId: string): Promise<BackendScheduleSummary> {
+export async function getScheduleSummary(studentId: string, instituteId?: string): Promise<BackendScheduleSummary> {
     return requestJson<BackendScheduleSummary>(
-        `${ENGAGEMENT_API_BASE}/api/v1/schedules/students/${encodeURIComponent(studentId)}/summary`
+        `${ENGAGEMENT_API_BASE}/api/v1/schedules/students/${encodeURIComponent(studentId)}/summary?${iq(instituteId)}`
     );
 }

@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useAuthStore } from '@/store/authStore';
 import {
     generateSchedule,
     getDailyMetrics,
@@ -52,6 +53,8 @@ export function useEngagementDashboardActions({
             return;
         }
 
+        const instId = useAuthStore.getState().user?.institute_id;
+
         setStudentInput(studentId);
         setIsLoadingDashboard(true);
         setError(null);
@@ -59,7 +62,7 @@ export function useEngagementDashboardActions({
 
         try {
             const [dashboard, history, metrics, summary] = await Promise.all([
-                getStudentDashboard(studentId),
+                getStudentDashboard(studentId, instId),
                 getEngagementHistory(studentId, 30),
                 getDailyMetrics(studentId, 7),
                 getEngagementSummary(studentId),
@@ -71,7 +74,7 @@ export function useEngagementDashboardActions({
             setDailyMetrics(metrics);
 
             try {
-                const prediction = await getLatestPrediction(studentId);
+                const prediction = await getLatestPrediction(studentId, instId);
                 const factors = extractPredictionFactors(prediction.contributing_factors);
                 setPredictionFactors(factors.length > 0 ? factors : dashboard.alerts.map((alert) => alert.message));
             } catch {
@@ -103,14 +106,15 @@ export function useEngagementDashboardActions({
             return;
         }
 
+        const instId = useAuthStore.getState().user?.institute_id;
         setIsGeneratingSchedule(true);
 
         try {
-            const generatedSchedule = await generateSchedule(selectedDashboard.student_id);
+            const generatedSchedule = await generateSchedule(selectedDashboard.student_id, instId);
 
             let reasoning: string[] = [];
             try {
-                const summary = await getScheduleSummary(selectedDashboard.student_id);
+                const summary = await getScheduleSummary(selectedDashboard.student_id, instId);
                 reasoning = Object.values(summary.reasoning || {});
             } catch {
                 reasoning = [];

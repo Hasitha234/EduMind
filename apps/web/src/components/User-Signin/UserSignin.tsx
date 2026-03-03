@@ -27,9 +27,15 @@ function UserSignin() {
   }, [queryStudentId]);
 
   function performLogin(id: string) {
-    const trimmed = id.trim().toUpperCase();
+    const trimmed = id.trim();
     if (!trimmed) {
       setError('Student ID is required');
+      return;
+    }
+
+    const lowerTrimmed = trimmed.toLowerCase();
+    if (lowerTrimmed === 'admin' || lowerTrimmed === 'admin_b') {
+      setError('Admin accounts must use the Admin Sign In page.');
       return;
     }
 
@@ -40,8 +46,8 @@ function UserSignin() {
       setIsLoading(false);
       login(
         {
-          id: trimmed,
-          name: `Student ${trimmed}`,
+          id: trimmed.toUpperCase(),
+          name: `Student ${trimmed.toUpperCase()}`,
           email: `${trimmed.toLowerCase()}@lms.edu`,
           role: 'student',
           institute_id: (queryInstituteId ?? 'LMS_INST_A').trim(),

@@ -88,7 +88,7 @@ export default function EngagementOverview() {
         }
     };
 
-    useEffect(() => { void fetchStudents(); }, []);
+    useEffect(() => { void fetchStudents(); }, [instituteId]);
 
     const displayed = students.filter(s => {
         if (filter === 'at_risk') return s.at_risk;

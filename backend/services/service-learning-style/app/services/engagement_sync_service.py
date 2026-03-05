@@ -35,17 +35,11 @@ def map_metric_to_behavior(student_id: str, metric: Dict[str, Any]) -> StudentBe
     """
     Map one DailyMetricResponse from engagement-tracker to StudentBehaviorTracking.
 
-    engagement metric fields (from API):
-      - student_id
-      - date
-      - login_count
-      - total_session_duration_minutes
-      - page_views
-      - content_interactions
-      - forum_posts
-      - forum_replies
-      - quiz_attempts
-      - assignments_submitted
+    VARK mapping:
+      - Auditory: video_plays, video_watch_minutes → video_watch_time, video_interactions
+      - Reading: page_views, content_interactions → text_read_time, articles_read
+      - Visual: resource_downloads → diagram_views (e.g. diagram/image views)
+      - Kinesthetic: quiz_attempts, assignments_submitted → interactive_exercises
     """
     # Parse date string to datetime (store as midnight)
     tracking_date = datetime.fromisoformat(str(metric["date"]))
@@ -55,42 +49,50 @@ def map_metric_to_behavior(student_id: str, metric: Dict[str, Any]) -> StudentBe
 
     page_views = int(metric.get("page_views", 0))
     content_interactions = int(metric.get("content_interactions", 0))
+    video_plays = int(metric.get("video_plays", 0))
+    video_watch_minutes = float(metric.get("video_watch_minutes", 0.0))
+    resource_downloads = int(metric.get("resource_downloads", 0))
+    quiz_attempts = int(metric.get("quiz_attempts", 0))
+    assignments_submitted = int(metric.get("assignments_submitted", 0))
     forum_posts = int(metric.get("forum_posts", 0))
     forum_replies = int(metric.get("forum_replies", 0))
     login_count = int(metric.get("login_count", 0))
 
-    # Very simple approximations to feed the model:
+    # VARK-specific mappings
+    video_watch_seconds = int(video_watch_minutes * 60)
+    video_completion_rate = (1.0 if video_plays > 0 else 0.0) * 100  # simplified
     text_read_time = (page_views + content_interactions) * 60  # 1 min per page/interaction
+    interactive_exercises = quiz_attempts + assignments_submitted
 
     return StudentBehaviorTracking(
       student_id=student_id,
       tracking_date=tracking_date,
       week_number=tracking_date.isocalendar()[1],
-      # Video / audio – we don't have these metrics yet, keep zero
-      video_watch_time=0,
-      video_completion_rate=0.0,
-      video_interactions=0,
+      # Auditory (video)
+      video_watch_time=video_watch_seconds,
+      video_completion_rate=video_completion_rate,
+      video_interactions=video_plays,
       # Reading
       text_read_time=text_read_time,
-      articles_read=page_views,
+      articles_read=page_views + content_interactions,
       note_taking_count=0,
-      # Audio
+      # Audio (podcasts - not from LMS yet)
       audio_playback_time=0,
       podcast_completions=0,
-      # Interactive / hands-on
+      # Kinesthetic (quizzes, assignments)
       simulation_time=0,
-      interactive_exercises=0,
-      hands_on_activities=0,
+      interactive_exercises=interactive_exercises,
+      hands_on_activities=assignments_submitted,
       # Collaboration
       forum_posts=forum_posts,
       discussion_participation=forum_replies,
       peer_interactions=0,
-      # Visual interactions
-      diagram_views=0,
-      image_interactions=0,
-      visual_aid_usage=0,
+      # Visual (diagrams, images - resource_download used for diagram view)
+      diagram_views=resource_downloads,
+      image_interactions=resource_downloads,
+      visual_aid_usage=resource_downloads,
       # Overall
-      total_session_time=total_seconds,
+      total_session_time=max(total_seconds, video_watch_seconds + text_read_time),
       login_count=login_count,
     )
 

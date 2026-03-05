@@ -139,6 +139,9 @@ class DailyMetricResponse(BaseModel):
     total_session_duration_minutes: float
     page_views: int
     content_interactions: int
+    video_plays: int = 0
+    video_watch_minutes: float = 0.0
+    resource_downloads: int = 0
     forum_posts: int
     forum_replies: int
     quiz_attempts: int

@@ -98,6 +98,22 @@ def get_student_analytics(
     db: Session = Depends(get_db)
 ):
     """Get comprehensive analytics for a student"""
+    # Sync latest engagement data from engagement-tracker
+    try:
+        from app.services.engagement_sync_service import sync_student_behavior
+        sync_student_behavior(student_id=student_id, days=14)
+    except Exception:
+        pass
+
+    # Refresh learning style prediction from behavior data
+    try:
+        from app.services.ml_service import get_ml_service
+        ml = get_ml_service()
+        if ml.is_ready:
+            ml.classify_and_update(student_id, db)
+    except Exception:
+        pass
+
     profile = db.query(StudentLearningProfile).filter(
         StudentLearningProfile.student_id == student_id
     ).first()

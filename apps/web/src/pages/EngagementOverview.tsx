@@ -5,16 +5,14 @@ import {
     Activity,
     AlertTriangle,
     BarChart3,
-    BookOpen,
     Brain,
     CheckCircle,
     RefreshCw,
-    TrendingDown,
-    TrendingUp,
     Users,
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_ENGAGEMENT_TRACKER_API_URL ?? 'http://localhost:8005';
+const LEARNING_STYLE_API = import.meta.env.VITE_LEARNING_STYLE_API_URL ?? 'http://localhost:8006';
 
 interface StudentRow {
     student_id: string;
@@ -25,6 +23,16 @@ interface StudentRow {
     risk_level: string;
     risk_probability: number | null;
     last_updated: string;
+    learning_style?: string;
+}
+
+interface LearningStyleProfile {
+    student_id: string;
+    learning_style: string;
+}
+
+interface SystemStats {
+    learning_style_distribution?: Record<string, number>;
 }
 
 interface ListResponse {
@@ -32,31 +40,10 @@ interface ListResponse {
     students: StudentRow[];
 }
 
-const RISK_COLORS: Record<string, string> = {
-    High: 'bg-red-100 text-red-700 border-red-200',
-    Medium: 'bg-amber-100 text-amber-700 border-amber-200',
-    Low: 'bg-green-100 text-green-700 border-green-200',
-    Unknown: 'bg-slate-100 text-slate-500 border-slate-200',
-};
-
-const LEVEL_COLORS: Record<string, string> = {
-    High: 'bg-emerald-100 text-emerald-700',
-    Medium: 'bg-blue-100 text-blue-700',
-    Low: 'bg-orange-100 text-orange-700',
-    Critical: 'bg-red-100 text-red-700',
-};
-
 const SCORE_BAR_COLOR = (score: number) => {
     if (score >= 70) return 'bg-emerald-500';
     if (score >= 40) return 'bg-amber-400';
     return 'bg-red-500';
-};
-
-const TrendIcon = ({ trend }: { trend: string }) => {
-    const t = (trend ?? '').toLowerCase();
-    if (t.includes('improv') || t === 'increasing') return <TrendingUp className="w-4 h-4 text-emerald-500" />;
-    if (t.includes('declin') || t === 'decreasing') return <TrendingDown className="w-4 h-4 text-red-500" />;
-    return <Activity className="w-4 h-4 text-slate-400" />;
 };
 
 export default function EngagementOverview() {
@@ -69,17 +56,43 @@ export default function EngagementOverview() {
     const [error, setError] = useState<string | null>(null);
     const [filter, setFilter] = useState<'all' | 'at_risk' | 'high_risk'>('all');
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+    const [learningStyleMap, setLearningStyleMap] = useState<Record<string, string>>({});
+    const [avgLearningStyle, setAvgLearningStyle] = useState<string>('—');
 
     const fetchStudents = async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(
-                `${API_BASE}/api/v1/students/list?limit=200&institute_id=${encodeURIComponent(instituteId)}`
-            );
-            if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-            const data: ListResponse = await res.json();
-            setStudents(data.students);
+            const [listRes, profilesRes, statsRes] = await Promise.all([
+                fetch(`${API_BASE}/api/v1/students/list?limit=200&institute_id=${encodeURIComponent(instituteId)}`),
+                fetch(`${LEARNING_STYLE_API}/api/v1/students/?limit=500`),
+                fetch(`${LEARNING_STYLE_API}/api/v1/system/stats`),
+            ]);
+
+            if (!listRes.ok) throw new Error(`Server responded with ${listRes.status}`);
+            const data: ListResponse = await listRes.json();
+            const studentsList = data.students as StudentRow[];
+
+            const map: Record<string, string> = {};
+            if (profilesRes.ok) {
+                const profiles: LearningStyleProfile[] = await profilesRes.json();
+                profiles.forEach((p) => { map[p.student_id] = p.learning_style; });
+            }
+            setLearningStyleMap(map);
+
+            let modeStyle = '—';
+            if (statsRes.ok) {
+                const stats: SystemStats = await statsRes.json();
+                const dist = stats.learning_style_distribution ?? {};
+                const entries = Object.entries(dist);
+                if (entries.length > 0) {
+                    const [top] = entries.sort((a, b) => b[1] - a[1]);
+                    modeStyle = top[0];
+                }
+            }
+            setAvgLearningStyle(modeStyle);
+
+            setStudents(studentsList.map((s) => ({ ...s, learning_style: map[s.student_id] })));
             setLastRefresh(new Date());
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'Failed to load students');
@@ -134,20 +147,33 @@ export default function EngagementOverview() {
 
                     {/* Summary Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                        {[
-                            { label: 'Total Students', value: stats.total, icon: <Users className="w-5 h-5" />, color: 'text-blue-400' },
-                            { label: 'Avg Engagement', value: `${stats.avgScore}%`, icon: <Activity className="w-5 h-5" />, color: 'text-emerald-400' },
-                            { label: 'At Risk', value: stats.atRisk, icon: <AlertTriangle className="w-5 h-5" />, color: 'text-amber-400' },
-                            { label: 'High Risk', value: stats.highRisk, icon: <AlertTriangle className="w-5 h-5" />, color: 'text-red-400' },
-                        ].map(card => (
-                            <div key={card.label} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                                <div className={`flex items-center gap-2 ${card.color} mb-1`}>
-                                    {card.icon}
-                                    <span className="text-xs font-medium text-slate-300">{card.label}</span>
-                                </div>
-                                <div className="text-2xl font-bold text-white">{card.value}</div>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                            <div className="flex items-center gap-2 text-blue-400 mb-1">
+                                <Users className="w-5 h-5" />
+                                <span className="text-xs font-medium text-slate-300">Total Students</span>
                             </div>
-                        ))}
+                            <div className="text-2xl font-bold text-white">{stats.total}</div>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                            <div className="flex items-center gap-2 text-emerald-400 mb-1">
+                                <Activity className="w-5 h-5" />
+                                <span className="text-xs font-medium text-slate-300">Avg Engagement</span>
+                            </div>
+                            <div className="text-2xl font-bold text-white">{stats.avgScore}%</div>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                            <div className="flex items-center gap-2 text-purple-400 mb-1">
+                                <Brain className="w-5 h-5" />
+                                <span className="text-xs font-medium text-slate-300">Average Learning Style</span>
+                            </div>
+                            <div className="text-2xl font-bold text-white">{avgLearningStyle}</div>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                            <div className="flex items-center gap-2 text-slate-400 mb-1">
+                                <span className="text-xs font-medium text-slate-400">—</span>
+                            </div>
+                            <div className="text-2xl font-bold text-white/50">—</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -216,28 +242,29 @@ export default function EngagementOverview() {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-200">
-                                        <th className="text-left px-6 py-4 text-slate-500 font-semibold">Student ID</th>
+                                        <th className="text-left px-6 py-4 text-slate-500 font-semibold w-12">#</th>
+                                        <th className="text-left px-6 py-4 text-slate-500 font-semibold">Student</th>
                                         <th className="text-left px-6 py-4 text-slate-500 font-semibold">Engagement Score</th>
-                                        <th className="text-left px-6 py-4 text-slate-500 font-semibold">Level</th>
-                                        <th className="text-left px-6 py-4 text-slate-500 font-semibold">Trend</th>
-                                        <th className="text-left px-6 py-4 text-slate-500 font-semibold">Risk Level</th>
-                                        <th className="text-left px-6 py-4 text-slate-500 font-semibold">Risk Probability</th>
+                                        <th className="text-left px-6 py-4 text-slate-500 font-semibold">Learning Style</th>
                                         <th className="text-left px-6 py-4 text-slate-500 font-semibold">Last Updated</th>
                                         <th className="text-left px-6 py-4 text-slate-500 font-semibold">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {displayed.map(student => (
+                                    {displayed.map((student, index) => (
                                         <tr
                                             key={student.student_id}
                                             className="hover:bg-slate-50/60 transition-colors group"
                                         >
+                                            <td className="px-6 py-4 text-slate-500 font-medium">
+                                                {index + 1}
+                                            </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-xs">
-                                                        {student.student_id.replace(/\D/g, '').slice(-2) || '?'}
+                                                        {index + 1}
                                                     </div>
-                                                    <span className="font-semibold text-slate-800">{student.student_id}</span>
+                                                    <span className="font-semibold text-slate-800">Student {index + 1}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -254,25 +281,7 @@ export default function EngagementOverview() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${LEVEL_COLORS[student.engagement_level] ?? 'bg-slate-100 text-slate-600'}`}>
-                                                    {student.engagement_level}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-1.5">
-                                                    <TrendIcon trend={student.engagement_trend} />
-                                                    <span className="text-slate-600 capitalize">{student.engagement_trend}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${RISK_COLORS[student.risk_level] ?? RISK_COLORS['Unknown']}`}>
-                                                    {student.at_risk ? '⚠ ' : ''}{student.risk_level}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-slate-600">
-                                                {student.risk_probability != null
-                                                    ? `${(student.risk_probability * 100).toFixed(1)}%`
-                                                    : '—'}
+                                                <span className="text-slate-600">{student.learning_style ?? '—'}</span>
                                             </td>
                                             <td className="px-6 py-4 text-slate-400 text-xs">
                                                 {student.last_updated}

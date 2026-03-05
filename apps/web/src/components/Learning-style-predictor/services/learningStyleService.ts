@@ -21,7 +21,8 @@ import {
 } from '../core/schemas/learningStyleApiSchema';
 import type { LearningStyleFormData, LearningStyleResult, LearningStyleType } from '../core/types';
 
-const API_BASE_URL = import.meta.env.VITE_LEARNING_STYLE_API_URL || 'http://localhost:8003';
+const API_BASE_URL = import.meta.env.VITE_LEARNING_STYLE_API_URL || 'http://localhost:8006';
+const ENGAGEMENT_TRACKER_URL = import.meta.env.VITE_ENGAGEMENT_TRACKER_API_URL || 'http://localhost:8005';
 const API_V1_PREFIX = '/api/v1';
 
 const STYLE_ORDER: LearningStyleType[] = ['visual', 'auditory', 'reading', 'kinesthetic'];
@@ -149,13 +150,29 @@ class LearningStyleApiService implements ILearningStyleDashboardService {
         };
     }
 
-    async listStudentIds(limit = 100): Promise<string[]> {
+    async listStudentIds(limit = 100, instituteId?: string): Promise<string[]> {
+        if (instituteId?.trim()) {
+            try {
+                const res = await fetch(
+                    `${ENGAGEMENT_TRACKER_URL}${API_V1_PREFIX}/students/list?limit=${limit}&institute_id=${encodeURIComponent(instituteId.trim())}`
+                );
+                if (!res.ok) return this.listStudentIdsFromLearningStyle(limit);
+                const data = await res.json() as { students?: { student_id: string }[] };
+                const list = data.students ?? [];
+                return list.map((s) => s.student_id);
+            } catch {
+                return this.listStudentIdsFromLearningStyle(limit);
+            }
+        }
+        return this.listStudentIdsFromLearningStyle(limit);
+    }
+
+    private async listStudentIdsFromLearningStyle(limit: number): Promise<string[]> {
         const payload = await requestJson(
             `${this.baseURL}${API_V1_PREFIX}/students?limit=${limit}`,
             undefined,
             LearningStyleStudentSummaryApiSchema.array()
         );
-
         return payload.map((item) => item.student_id);
     }
 
@@ -174,7 +191,7 @@ class LearningStyleApiService implements ILearningStyleDashboardService {
         };
     }
 
-    async getSystemStats(): Promise<LearningStyleSystemStats> {
+    async getSystemStats(instituteId?: string): Promise<LearningStyleSystemStats> {
         const payload = await requestJson(
             `${this.baseURL}${API_V1_PREFIX}/system/stats`,
             undefined,
@@ -194,8 +211,23 @@ class LearningStyleApiService implements ILearningStyleDashboardService {
             distribution[mappedStyle] = count;
         });
 
+        let totalStudents = payload.total_students;
+        if (instituteId?.trim()) {
+            try {
+                const res = await fetch(
+                    `${ENGAGEMENT_TRACKER_URL}${API_V1_PREFIX}/students/list?limit=1000&institute_id=${encodeURIComponent(instituteId.trim())}`
+                );
+                if (res.ok) {
+                    const data = await res.json() as { total?: number; students?: unknown[] };
+                    totalStudents = typeof data.total === 'number' ? data.total : (data.students?.length ?? totalStudents);
+                }
+            } catch {
+                // keep learning-style total if engagement request fails
+            }
+        }
+
         return {
-            totalStudents: payload.total_students,
+            totalStudents,
             totalResources: payload.total_resources,
             totalRecommendations: payload.total_recommendations,
             recommendationCompletionRate: payload.recommendation_completion_rate,

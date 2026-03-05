@@ -58,7 +58,10 @@ export interface LearningStyleWorkflowController {
     actions: LearningStyleWorkflowActions;
 }
 
-export function useLearningStyleWorkflow(service: ILearningStyleDashboardService): LearningStyleWorkflowController {
+export function useLearningStyleWorkflow(
+    service: ILearningStyleDashboardService,
+    instituteId?: string | null
+): LearningStyleWorkflowController {
     const state = useLearningStyleState();
     const store = useLearningStyleStore();
     const {
@@ -109,9 +112,10 @@ export function useLearningStyleWorkflow(service: ILearningStyleDashboardService
 
     const refreshDashboardMetrics = useCallback(async () => {
         try {
+            const id = instituteId?.trim() || undefined;
             const [stats, students] = await Promise.all([
-                service.getSystemStats(),
-                service.listStudentIds(STUDENT_LOOKUP_LIMIT),
+                service.getSystemStats(id),
+                service.listStudentIds(STUDENT_LOOKUP_LIMIT, id),
             ]);
 
             setKnownStudents(students);
@@ -121,7 +125,7 @@ export function useLearningStyleWorkflow(service: ILearningStyleDashboardService
         } catch (error) {
             console.error('Failed to refresh learning style dashboard metrics', error);
         }
-    }, [service, setKnownStudents, setSystemStats, setStyleDistribution, setTopStruggleTopics]);
+    }, [service, instituteId, setKnownStudents, setSystemStats, setStyleDistribution, setTopStruggleTopics]);
 
     useEffect(() => {
         const initialize = async () => {

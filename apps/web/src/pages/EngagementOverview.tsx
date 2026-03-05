@@ -242,8 +242,7 @@ export default function EngagementOverview() {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-200">
-                                        <th className="text-left px-6 py-4 text-slate-500 font-semibold w-12">#</th>
-                                        <th className="text-left px-6 py-4 text-slate-500 font-semibold">Student</th>
+                                        <th className="text-left px-6 py-4 text-slate-500 font-semibold">Student ID</th>
                                         <th className="text-left px-6 py-4 text-slate-500 font-semibold">Engagement Score</th>
                                         <th className="text-left px-6 py-4 text-slate-500 font-semibold">Learning Style</th>
                                         <th className="text-left px-6 py-4 text-slate-500 font-semibold">Last Updated</th>
@@ -251,20 +250,17 @@ export default function EngagementOverview() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {displayed.map((student, index) => (
+                                    {displayed.map(student => (
                                         <tr
                                             key={student.student_id}
                                             className="hover:bg-slate-50/60 transition-colors group"
                                         >
-                                            <td className="px-6 py-4 text-slate-500 font-medium">
-                                                {index + 1}
-                                            </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-xs">
-                                                        {index + 1}
+                                                        {student.student_id.replace(/\D/g, '').slice(-2) || '?'}
                                                     </div>
-                                                    <span className="font-semibold text-slate-800">Student {index + 1}</span>
+                                                    <span className="font-semibold text-slate-800">{student.student_id}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">

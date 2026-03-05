@@ -61,7 +61,7 @@ function createMockService(delay: number): ILearningStyleDashboardService {
         async checkHealth() {
             return { status: 'healthy', message: 'Mock service operational' };
         },
-        async listStudentIds() {
+        async listStudentIds(_limit?: number, _instituteId?: string) {
             return ['STU0001', 'STU0002', 'STU0003', 'STU0004'];
         },
         async getStudentProfile(studentId: string) {
@@ -72,7 +72,7 @@ function createMockService(delay: number): ILearningStyleDashboardService {
                 preferredDifficulty: 'Standard' as const,
             };
         },
-        async getSystemStats() {
+        async getSystemStats(_instituteId?: string) {
             return {
                 totalStudents: 16,
                 totalResources: 42,
@@ -137,17 +137,17 @@ function createLoggingService(service: ILearningStyleDashboardService): ILearnin
             console.log('[LearningStyleService] Health check');
             return service.checkHealth();
         },
-        async listStudentIds(limit) {
+        async listStudentIds(limit?, instituteId?) {
             console.log('[LearningStyleService] Fetching student IDs');
-            return service.listStudentIds(limit);
+            return service.listStudentIds(limit, instituteId);
         },
         async getStudentProfile(studentId) {
             console.log('[LearningStyleService] Fetching student profile:', studentId);
             return service.getStudentProfile(studentId);
         },
-        async getSystemStats() {
+        async getSystemStats(instituteId?) {
             console.log('[LearningStyleService] Fetching system stats');
-            return service.getSystemStats();
+            return service.getSystemStats(instituteId);
         },
         async generateRecommendations(studentId, maxRecommendations) {
             console.log('[LearningStyleService] Generating recommendations for:', studentId);

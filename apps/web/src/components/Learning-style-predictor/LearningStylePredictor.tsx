@@ -30,8 +30,8 @@ function formatPercentage(value: number | undefined): string {
 }
 
 function LearningStylePredictorCore({ service }: LearningStylePredictorCoreProps) {
-    const workflow = useLearningStyleWorkflow(service);
     const { user, isAuthenticated } = useAuth();
+    const workflow = useLearningStyleWorkflow(service, user?.institute_id);
     const autoSelected = useRef(false);
     const search = useSearch({ from: '/learning-style' });
     const urlStudentId = (search as { student_id?: string }).student_id;
